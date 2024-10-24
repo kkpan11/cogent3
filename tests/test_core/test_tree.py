@@ -1229,6 +1229,14 @@ class TreeNodeTests(TestCase):
         result = self.t.compare_by_subsets(self.TreeRoot)
         self.assertEqual(result, 1)
 
+    def test_treenode_comparison_with_none_name(self):
+        assert self.Empty < self.Single
+        assert self.Single > self.Empty
+        assert self.Single > TreeNode(name=None)
+        assert TreeNode(name=None) < self.Single
+        assert TreeNode(name="test") > self.Empty
+        assert self.Empty < TreeNode(name="test")
+
 
 class PhyloNodeTests(TestCase):
     """Tests of phylogeny-specific methods."""
@@ -2352,3 +2360,23 @@ def test_split_name_and_support(name, expected):
 def test_split_name_and_support_invalid_support(invalid):
     with pytest.raises(ValueError):
         split_name_and_support(invalid)
+
+
+def test_phylonode_support():
+    tip_names = [str(i) for i in range(1, 13)]
+    tree = make_tree(
+        treestring="(1,(((2,3),4)/53,(5,((6,(7,(8,9))def/25),(10,11)abc))),12);"
+    )
+    assert tree.get_tip_names() == tip_names
+    # parent of 4 is node with only support value
+    just_support = tree.get_node_matching_name("4").parent
+    assert just_support.params["support"] == 53.0
+    # parent of 10 has a node name only
+    just_name = tree.get_node_matching_name("10").parent
+    assert just_name.name == "abc"
+    assert "support" not in just_name.params
+    # the node with name "def/25" correctly resoloved into node
+    # name "def" and support 25.0
+    name_and_support = tree.get_node_matching_name("def")
+    assert name_and_support.name == "def"  # bit redundant given selection process
+    assert name_and_support.params["support"] == 25.0
